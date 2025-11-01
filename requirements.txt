@@ -1,3 +1,5 @@
 httpx
 asyncpg
 python-dotenv
+tabulate
+questionary

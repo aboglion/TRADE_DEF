@@ -59,46 +59,45 @@ class Coin:
     
     # -----------------------------------------------
     # (בקשה #1) הפונקציה הראשית הופכת לאסינכרונית
-    async def process_coin(self):
+    async def process_coin(self, prefetched_books: dict = None):
     # -----------------------------------------------
         
         try:
             now = time.time()
             self.last_time_str = datetime.fromtimestamp(now).strftime("%H:%M:%S")
 
-            # -----------------------------------------------
-            # (בקשה #1) לוגיקת שליפה אסינכרונית חדשה
-            # -----------------------------------------------
-            
-            # 1. הכנת כל המשימות (הן לא רצות עדיין)
-            tasks = []
-            exchanges_order = [] # לשמור על הסדר כדי לדעת מי זו מי
-            
-            for ex, connector in Config.EXCHANGES.items():
-                tasks.append(connector.fetch(self.symbol))
-                exchanges_order.append(ex)
+            fetched_books = prefetched_books
 
-            # 2. הרצת כל המשימות במקביל והמתנה לתוצאות
-            # return_exceptions=True -> חשוב! כדי שכשלון באחת לא יעצור את כולן
-            results = await asyncio.gather(*tasks, return_exceptions=True)
-
-            # 3. איסוף התוצאות למילון זמני
-            fetched_books = {}
-            for i, result in enumerate(results):
-                ex = exchanges_order[i] # מציאת שם הבורסה לפי הסדר
+            if fetched_books is None:
+                # --- מצב הרצה חיה: שלוף נתונים מהרשת ---
+                # 1. הכנת כל המשימות (הן לא רצות עדיין)
+                tasks = []
+                exchanges_order = [] # לשמור על הסדר כדי לדעת מי זו מי
                 
-                if isinstance(result, Exception):
-                    # אם התוצאה היא שגיאה, נרשום אותה ונמשיך
-                    print(f"Coin.process_coin (Async): Error fetching data from {ex} for {self.symbol}: {result}")
-                    fetched_books[ex] = {"bids": [], "asks": []} # שמירת ערך ריק
-                else:
-                    # אם התוצאה תקינה
-                    fetched_books[ex] = result
+                for ex, connector in Config.EXCHANGES.items():
+                    tasks.append(connector.fetch(self.symbol))
+                    exchanges_order.append(ex)
+
+                # 2. הרצת כל המשימות במקביל והמתנה לתוצאות
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                # 3. איסוף התוצאות למילון זמני
+                fetched_books = {}
+                for i, result in enumerate(results):
+                    ex = exchanges_order[i] # מציאת שם הבורסה לפי הסדר
+                    
+                    if isinstance(result, Exception):
+                        # אם התוצאה היא שגיאה, נרשום אותה ונמשיך
+                        print(f"Coin.process_coin (Async): Error fetching data from {ex} for {self.symbol}: {result}")
+                        fetched_books[ex] = {"bids": [], "asks": []} # שמירת ערך ריק
+                    else:
+                        # אם התוצאה תקינה
+                        fetched_books[ex] = result
+                
+                # 4. שמירת הנתונים בבסיס הנתונים
+                await TimescaleDBHandler.save_order_book_data(self.symbol, fetched_books)
             
-            # -----------------------------------------------
-            # שלב חדש: שמירת הנתונים בבסיס הנתונים
-            await TimescaleDBHandler.save_order_book_data(self.symbol, fetched_books)
-            # -----------------------------------------------
+            # מכאן והלאה, הלוגיקה זהה עבור הרצה חיה וסימולציה
 
             # -----------------------------------------------
             # (בקשה #4) לוגיקת בדיקת תקינות נתונים ו-Fallback

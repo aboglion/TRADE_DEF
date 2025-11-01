@@ -25,6 +25,9 @@ services:
       - POSTGRES_USER=${DB_USER:-postgres}
       - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
       - POSTGRES_DB=${DB_DATABASE:-trading_data}
+    ports:
+      # חשיפת הפורט של בסיס הנתונים למחשב המארח
+      - "5432:5432"
     volumes:
       - timescaledb_data:/var/lib/postgresql/data # שמירת המידע של בסיס הנתונים באופן קבוע
 
