@@ -4,7 +4,7 @@ from CONFIG import Config
 from COIN_MODELS.strategy.SignalDecisionEngine import SignalDecisionEngine
 from COIN_MODELS.strategy.TradeManager import TradeManager
 import traceback
-#from dashboard_data.SQL_DB_DashboardData import SQL_DB_DashboardData
+from COIN_MODELS.database.db_handler import TimescaleDBHandler
 import asyncio  # <--- נוסף עבור asyncio
 
 # =====================================================
@@ -96,6 +96,11 @@ class Coin:
                     fetched_books[ex] = result
             
             # -----------------------------------------------
+            # שלב חדש: שמירת הנתונים בבסיס הנתונים
+            await TimescaleDBHandler.save_order_book_data(self.symbol, fetched_books)
+            # -----------------------------------------------
+
+            # -----------------------------------------------
             # (בקשה #4) לוגיקת בדיקת תקינות נתונים ו-Fallback
             # -----------------------------------------------
 
@@ -158,11 +163,6 @@ class Coin:
                 self.signal = "FALLBACK_DATA"
                 # אין לקרוא ל-analyze או trade_manager
             
-            # -----------------------------------------------
-            # שמירת נתונים לדשבורד תתרחש בכל מקרה
-            # כך הדשבורד יראה "FALLBACK_DATA" במצב כשלון
-            #SQL_DB_DashboardData.save_all_data(self)
-            # -----------------------------------------------
 
         except Exception as e:
             # לוג שגיאה כללי
@@ -180,7 +180,6 @@ class Coin:
             self.Fallback_DATA = True
             self.signal = "ERROR"
             self.Fallback_DATA = True # כניסה למצב הגנה גם בשגיאה
-            #SQL_DB_DashboardData.save_all_data(self) # שמירת מצב השגיאה
 
 
 # ... (שאר הקובץ, כולל קלאס ALL_Coins, נשאר זהה) ...

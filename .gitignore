@@ -1,43 +1,21 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Virtual environments
-venv/
-env/
-.venv/
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-.tox/
-.pytest_cache/
-.coverage
-coverage.xml
-
-# IDEs
-.vscode/
-.idea/
-
-# Logs
-LOGS/
-*.log
-
-# dotenv
+# --- Environment & Credentials ---
+# התעלם מקובץ .env המכיל סיסמאות ופרטים רגישים. חובה.
 .env
+
+# --- Python ---
+# התעלם מקבצים ותיקיות שפייתון יוצר אוטומטית בזמן ריצה.
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Project-specific Logs ---
+# התעלם מתיקיית הלוגים שהפרויקט יוצר.
+LOGS/
+
+# --- Common IDE & OS files ---
+# התעלם מקבצים של סביבות פיתוח ומערכות הפעלה.
+# מונע "זבל" במאגר הקוד.
+.idea/
+.vscode/
+.DS_Store

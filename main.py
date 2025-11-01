@@ -8,6 +8,7 @@ from datetime import datetime
 try:
     from CONFIG import Config
     from COIN_MODELS.COIN_MAIN import Coin, ALL_Coins
+    from COIN_MODELS.database.db_handler import TimescaleDBHandler
 except ImportError as e:
     print(f"!!! CRITICAL IMPORT ERROR !!!: {e}")
     exit(1)
@@ -24,6 +25,10 @@ async def main_loop():
     print("-" * 50)
     print(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] --- System Initialization ---")
     
+    # 0. אתחול בסיס הנתונים
+    await TimescaleDBHandler.initialize_db()
+    print("Database initialized.")
+
     # 1. אתחול אובייקטים של מטבעות
     if not Config.SYMBOLS:
         print("CRITICAL: Config.SYMBOLS is empty. Cannot start.")

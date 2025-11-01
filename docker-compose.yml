@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  # שירות מספר 1: אפליקציית הפייתון שלנו
+  app:
+    build: .  # בנה את האימג' מה-Dockerfile שנמצא בתיקייה הנוכחית
+    container_name: trading_app
+    restart: unless-stopped
+    depends_on:
+      - db  # ודא שבסיס הנתונים יופעל לפני האפליקציה
+    environment:
+      - DB_HOST=db  # כאן אנחנו מגדירים את משתנה הסביבה שהוספנו ל-CONFIG.py
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_DATABASE=${DB_DATABASE:-trading_data}
+    volumes:
+      - .:/app # סנכרון הקוד המקומי עם הקונטיינר (מעולה לפיתוח)
+
+  # שירות מספר 2: בסיס הנתונים TimescaleDB
+  db:
+    image: timescale/timescaledb:latest-pg14 # שימוש באימג' רשמי של TimescaleDB
+    container_name: trading_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-password}
+      - POSTGRES_DB=${DB_DATABASE:-trading_data}
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data # שמירת המידע של בסיס הנתונים באופן קבוע
+
+volumes:
+  timescaledb_data: # הגדרת ה-volume

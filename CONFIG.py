@@ -1,7 +1,11 @@
 # Config.py - הקונפיגורציה המושלמת (תוך שמירה על עקרונות ניהול סיכונים)
 import os
 from enum import Enum
+from dotenv import load_dotenv
 from COIN_MODELS.MARKETS_FETCH_DATA import BinanceConnector, BybitConnector, OKXConnector
+
+# טעינת משתני סביבה מקובץ .env
+load_dotenv()
 
 # =====================================================
 # איתותים (הבסיס לכל המערכת)
@@ -74,9 +78,10 @@ class Config:
     STOP_LOSS_PCT = 0.0066 
 
     # -------------------------------------------------
-    # הגדרות שירותים ודשבורד
+    # הגדרות בסיס נתונים (PostgreSQL + TimescaleDB)
     # -------------------------------------------------
-    # נתיב לקובץ מסד הנתונים
-    DB_NAME = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dashboard_data", "DashboardData.db")
-    PORT = 7070
-    DEBUG = True
+    DB_USER = os.getenv("DB_USER", "postgres")
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "password") # ברירת המחדל תשמש רק אם המשתנה לא נמצא ב-.env
+    DB_HOST = os.getenv("DB_HOST", "localhost") # קבל את הכתובת ממשתנה סביבה, עם ברירת מחדל ל-localhost
+    DB_PORT = os.getenv("DB_PORT", "5432")
+    DB_DATABASE = os.getenv("DB_DATABASE", "trading_data")
