@@ -62,9 +62,10 @@ async def main_loop():
             print(f"[{now_str}] Cycle completed in {cycle_duration:.2f}s. Summary:")
             
             for coin in ALL_Coins.Coins:
-                status_color = "🟢" if coin.signal in ["BUY", "SELL"] and not coin.Fallback_DATA else "🟡" if coin.Fallback_DATA else "⚫"
-                
-                print(f"  {status_color} {coin.symbol:<8} | Price: {coin.med_price:10.4f} | Signal: {coin.signal:<15} | Fallback: {'YES' if coin.Fallback_DATA else 'NO'}")
+                # Display Status
+                status_color = "\033[92m" if coin.signal == "BUY" else "\033[91m" if coin.signal == "SELL" else "\033[90m"
+                price_display = f"{coin.med_price:10.4f}" if coin.med_price is not None else "       N/A"
+                print(f"  {status_color} {coin.symbol:<8} | Price: {price_display} | Signal: {coin.signal:<15} | Fallback: {'YES' if coin.Fallback_DATA else 'NO'}")
                 
             
             # 6. המתנה (המתנה יעילה שמפצה על הזמן שכבר עבר)

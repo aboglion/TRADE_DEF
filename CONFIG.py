@@ -81,7 +81,44 @@ class Config:
     # הגדרות בסיס נתונים (PostgreSQL + TimescaleDB)
     # -------------------------------------------------
     DB_USER = os.getenv("DB_USER", "postgres")
-    DB_PASSWORD = os.getenv("DB_PASSWORD", "password") # ברירת המחדל תשמש רק אם המשתנה לא נמצא ב-.env
-    DB_HOST = os.getenv("DB_HOST", "localhost") # קבל את הכתובת ממשתנה סביבה, עם ברירת מחדל ל-localhost
+    DB_PASSWORD = os.getenv("DB_PASSWORD", "password") 
+    DB_HOST = os.getenv("DB_HOST", "localhost")
     DB_PORT = os.getenv("DB_PORT", "5432")
     DB_DATABASE = os.getenv("DB_DATABASE", "trading_data")
+
+    def __init__(self, **kwargs):
+        """
+        Initialize a Config instance. 
+        If kwargs are provided, they override the class defaults for this instance.
+        """
+        # Load defaults from class attributes
+        self.SYMBOLS = Config.SYMBOLS
+        self.CYCLE_INTERVAL = Config.CYCLE_INTERVAL
+        self.HISTORY_TIME_MINUTES = Config.HISTORY_TIME_MINUTES
+        self.BASE_THRESHOLD = Config.BASE_THRESHOLD
+        self.MAX_VOL_ADJ = Config.MAX_VOL_ADJ
+        self.MIN_PCT_CHANGE = Config.MIN_PCT_CHANGE
+        self.MIN_CONSEC_SIGNALS = Config.MIN_CONSEC_SIGNALS
+        self.FEE = Config.FEE
+        self.TAKE_profit_PCT = Config.TAKE_profit_PCT
+        self.STOP_LOSS_PCT = Config.STOP_LOSS_PCT
+        
+        # Override with provided kwargs
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
+        
+        # Recalculate dependent parameters
+        self.HISTORY_LIMIT = int((self.HISTORY_TIME_MINUTES * 60) / self.CYCLE_INTERVAL)
+        self.MOMENTUM_WINDOW = int(self.HISTORY_LIMIT / 4)
+        self.VOLATILITY_WINDOW = int(self.HISTORY_LIMIT / 2)
+
+    def to_dict(self):
+        return {
+            "HISTORY_TIME_MINUTES": self.HISTORY_TIME_MINUTES,
+            "BASE_THRESHOLD": self.BASE_THRESHOLD,
+            "TAKE_profit_PCT": self.TAKE_profit_PCT,
+            "STOP_LOSS_PCT": self.STOP_LOSS_PCT,
+            "MIN_CONSEC_SIGNALS": self.MIN_CONSEC_SIGNALS,
+            "CYCLE_INTERVAL": self.CYCLE_INTERVAL
+        }

@@ -11,14 +11,16 @@ import asyncio  # <--- נוסף עבור asyncio
 # Coin אובייקט
 # =====================================================
 class Coin:
-    def __init__(self, symbol):
+    def __init__(self, symbol, config=None):
         self.symbol = symbol
+        self.config = config if config else Config()
 
         # Use Config from CONFIG.py
         # Initialize SignalDecisionEngine and TradeManager with correct imports
         self.orderbooks = {ex: {"bids": [], "asks": []} for ex in ["binance", "bybit", "okx"]}
-        self.signal_state = SignalDecisionEngine(self)
-        self.trade_manager = TradeManager(self)
+        self.signal_state = SignalDecisionEngine(self, self.config)
+        self.trade_manager = TradeManager(self) # TradeManager also needs config update if it uses it
+
         self.is_in_bought_Position = False
         self.buyed_price = 0.0
         self.med_price_history = []
@@ -41,6 +43,10 @@ class Coin:
         self.prev_okx_price = None
         self.signal = "UNKNOWN"
         self.last_time_str = ""
+        
+        # For Dashboard / Analysis
+        self.trade_log = [] 
+        self.equity_curve = []
         
         # -----------------------------------------------
         # (בקשה #4) דגל חדש למצב Fallback
@@ -141,6 +147,26 @@ class Coin:
                 if self.med_price is not None and self.med_price > 0 and self.prev_med_price != self.med_price:
                     self.trade_manager.check_selling_cond()
                     self.trade_manager.check_buying_cond()
+
+                # --- שמירת מטריקות ל-DB עבור הדשבורד ---
+                try:
+                    current_history = len(self.med_price_history)
+                    required_history = self.config.VOLATILITY_WINDOW
+                    readiness = min(current_history / required_history, 1.0)
+
+                    metrics_data = {
+                        "price": self.med_price,
+                        "volatility": self.signal_state.volatility,
+                        "momentum": self.signal_state.momentum,
+                        "buy_pressure": self.signal_state.buy_pressure,
+                        "sell_pressure": self.signal_state.sell_pressure,
+                        "signal": self.signal,
+                        "readiness": readiness
+                    }
+                    print(f"[{self.symbol}] Saving metrics: Price={self.med_price:.4f}, Readiness={readiness:.2%}, Signal={self.signal}")
+                    await TimescaleDBHandler.save_market_metrics(self.symbol, metrics_data)
+                except Exception as e:
+                    print(f"[{self.symbol}] Error saving metrics: {e}")
 
             else:
                 # --- מצב כשלון/Fallback: דלג על עיבוד ---

@@ -1,5 +1,5 @@
 from collections import deque
-from COIN_MODELS.MARKETS_CALC import MARKETS_CALC # Moved import to top
+from COIN_MODELS.MARKETS_CALC import MARKETS_CALC
 import time
 from CONFIG import Config, SignalType  # Import SignalType from CONFIG.py
 
@@ -7,9 +7,10 @@ from CONFIG import Config, SignalType  # Import SignalType from CONFIG.py
 # מחליט איתותים
 # =====================================================
 class SignalDecisionEngine:
-    def __init__(self, coin):
+    def __init__(self, coin, config=None):
         self.coin = coin
-        self.recent_signals = deque([SignalType.NEUTRAL] * Config.MOMENTUM_WINDOW, maxlen=Config.MOMENTUM_WINDOW)
+        self.config = config if config else Config()
+        self.recent_signals = deque([SignalType.NEUTRAL] * self.config.MOMENTUM_WINDOW, maxlen=self.config.MOMENTUM_WINDOW)
         self.current_signal = SignalType.NEUTRAL
         self.signal_price = 0.0
         self.consecutive = 0
@@ -53,7 +54,7 @@ class SignalDecisionEngine:
         self.coin.okx_history.append((now, self.okx_price))
 
         # Limit history length to Config.HISTORY_LIMIT
-        history_limit = Config.HISTORY_LIMIT if Config.HISTORY_LIMIT > 0 else 60
+        history_limit = self.config.HISTORY_LIMIT if self.config.HISTORY_LIMIT > 0 else 60
         if len(self.coin.med_price_history) > history_limit:
             self.coin.med_price_history.pop(0)
         if len(self.coin.binance_history) > history_limit:
@@ -77,7 +78,7 @@ class SignalDecisionEngine:
 
         history_len = len(self.coin.med_price_history)
         # print(f"[{self.coin.symbol}] History Length: {history_len}, Required: {Config.VOLATILITY_WINDOW}")
-        if history_len < Config.VOLATILITY_WINDOW:
+        if history_len < self.config.VOLATILITY_WINDOW:
             self.last_decision = SignalType.NEUTRAL
             return self.last_decision
 
@@ -86,7 +87,7 @@ class SignalDecisionEngine:
         self.buy_pressure, self.sell_pressure = calc.calculate_pressure_ratios()
         # print(f"[{self.coin.symbol}] Volatility: {self.volatility:.4f}, Buy Pressure: {self.buy_pressure:.4f}, Sell Pressure: {self.sell_pressure:.4f}")
 
-        threshold = Config.BASE_THRESHOLD + min(self.volatility * 100, Config.MAX_VOL_ADJ) * (1 + self.momentum)
+        threshold = self.config.BASE_THRESHOLD + min(self.volatility * 100, self.config.MAX_VOL_ADJ) * (1 + self.momentum)
 
         raw = SignalType.NEUTRAL
         if self.buy_pressure > threshold: raw = SignalType.BUY
@@ -105,9 +106,9 @@ class SignalDecisionEngine:
             self.consecutive = 1
             self.signal_price = self.med_price
 
-        if self.consecutive >= Config.MIN_CONSEC_SIGNALS:
+        if self.consecutive >= self.config.MIN_CONSEC_SIGNALS:
             pct_change = abs(self.med_price - self.signal_price) / self.signal_price if self.signal_price > 0 else 0.0
-            self.last_decision = final if pct_change >= Config.MIN_PCT_CHANGE else SignalType.NEUTRAL
+            self.last_decision = final if pct_change >= self.config.MIN_PCT_CHANGE else SignalType.NEUTRAL
             # print(f"[{self.coin.symbol}] Final Signal (consecutive): {self.last_decision}, Pct Change: {pct_change:.6f}, Required: {Config.MIN_PCT_CHANGE}")
         else:
             self.last_decision = SignalType.NEUTRAL

@@ -1,0 +1,1 @@
+# This file makes the COIN_MODELS directory a Python package.

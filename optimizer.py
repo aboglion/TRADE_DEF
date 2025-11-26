@@ -46,26 +46,15 @@ async def optimize_single_symbol(symbol, start_time, end_time, pool):
 
     results = []
     for i, params in enumerate(combinations):
-        # 4. דריסה זמנית של הגדרות הקונפיגורציה
-        original_config = {}
-        for key, value in params.items():
-            original_config[key] = getattr(Config, key)
-            setattr(Config, key, value)
-        
-        # עדכון פרמטרים תלויים
-        Config.HISTORY_LIMIT = int((Config.HISTORY_TIME_MINUTES * 60) / Config.CYCLE_INTERVAL)
-        Config.MOMENTUM_WINDOW = int(Config.HISTORY_LIMIT / 4)
-        Config.VOLATILITY_WINDOW = int(Config.HISTORY_LIMIT / 2)
+        # 4. Create a specific Config instance for this iteration
+        # This avoids modifying the global state and allows parallel execution
+        current_config = Config(**params)
 
-        # 5. הרצת ה-backtest עם ההגדרות החדשות
-        backtest_result = await run_backtest(symbol, start_time, end_time, pool=pool, verbose=False)
+        # 5. Run backtest with the new configuration
+        backtest_result = await run_backtest(symbol, start_time, end_time, pool=pool, verbose=False, config=current_config)
         
         if backtest_result and backtest_result.get('buy_trades', 0) > 0:
             results.append({**params, **backtest_result})
-
-        # 6. שחזור הגדרות הקונפיגורציה המקוריות
-        for key, value in original_config.items():
-            setattr(Config, key, value)
     
     if not results:
         print(f"--- Finished optimization for {symbol}: No profitable trades found. ---")

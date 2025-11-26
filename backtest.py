@@ -83,33 +83,38 @@ async def list_available_ranges(pool, symbol):
     print("Example:")
     print(f'docker-compose run --rm app python backtest.py {symbol} "{records[0]["start_range"].strftime("%Y-%m-%d %H:%M:%S")}" "{records[0]["end_range"].strftime("%Y-%m-%d %H:%M:%S")}"')
 
-async def run_backtest(symbol, start_time, end_time):
+async def run_backtest(symbol, start_time, end_time, pool=None, verbose=True, config=None):
     """
-    הפונקציה הראשית של ה-backtester.
-    מריצה את הסימולציה על הנתונים ההיסטוריים.
+    The main function of the backtester.
+    Runs the simulation on historical data.
     """
     print("-" * 50)
     print(f"Starting Backtest for {symbol}")
     print(f"Period: {start_time.strftime('%Y-%m-%d %H:%M:%S')} -> {end_time.strftime('%Y-%m-%d %H:%M:%S')}")
     print("-" * 50)
 
-    # 1. התחברות ל-DB ושליפת נתונים
-    pool = await asyncpg.create_pool(
-        user=Config.DB_USER, password=Config.DB_PASSWORD,
-        database=Config.DB_DATABASE, host=Config.DB_HOST, port=Config.DB_PORT
-    )
+    close_pool_at_end = False
+    if pool is None:
+        # 1. Connect to DB and fetch data
+        pool = await asyncpg.create_pool(
+            user=Config.DB_USER, password=Config.DB_PASSWORD,
+            database=Config.DB_DATABASE, host=Config.DB_HOST, port=Config.DB_PORT
+        )
+        close_pool_at_end = True
+
     historical_data = await fetch_backtest_data(pool, symbol, start_time, end_time)
     
     if not historical_data:
         print("No data found for the specified period.")
-        await pool.close()
+        if close_pool_at_end:
+            await pool.close()
         return
 
     if verbose:
         print(f"Found {len(historical_data)} historical data points to process.")
 
-    # 2. אתחול אובייקט המטבע
-    coin = Coin(symbol)
+    # 2. Initialize Coin object with injected config
+    coin = Coin(symbol, config=config)
 
     # 3. לולאת סימולציה
     for timestamp, fetched_books in historical_data:
@@ -126,6 +131,15 @@ async def run_backtest(symbol, start_time, end_time):
         # --- קריאה ללוגיקה המאוחדת ---
         await coin.process_coin(prefetched_books=fetched_books)
 
+        # Track equity for the chart
+        # We simulate equity as: Initial Capital (0) + Realized Profit
+        # In a real system, we'd track balance. Here we track cumulative profit.
+        coin.equity_curve.append({
+            "time": timestamp,
+            "profit": coin.total_profit,
+            "price": coin.med_price
+        })
+
     # 4. סיכום התוצאות
     total_profit_pct = (coin.total_profit / coin.buyed_price * 100) if coin.total_buy_trades > 0 and coin.buyed_price > 0 else 0
     
@@ -138,13 +152,15 @@ async def run_backtest(symbol, start_time, end_time):
         print("-" * 50)
 
     if close_pool_at_end:
-        await db_pool.close()
+        await pool.close()
 
     return {
         "total_profit": coin.total_profit,
         "total_profit_pct": total_profit_pct,
         "buy_trades": coin.total_buy_trades,
-        "sell_trades": coin.total_sell_trades
+        "sell_trades": coin.total_sell_trades,
+        "equity_curve": coin.equity_curve,
+        "trade_log": coin.trade_log # Note: TradeManager needs to populate this!
     }
 
 if __name__ == "__main__":

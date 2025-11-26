@@ -1,5 +1,4 @@
 from CONFIG import Config, SignalType
-#from dashboard_data.SQL_DB_DashboardData import SQL_DB_DashboardData
 
 import os
 
@@ -27,8 +26,6 @@ class TradeManager:
                 self.coin.total_buy_trades = 0
             self.coin.total_buy_trades += 1
             print(f"[{self.coin.symbol}] Executing BUY. Total Buy Trades: {self.coin.total_buy_trades}")
-            # דיווח עסקה ל-SQLite
-            #SQL_DB_DashboardData.record_trade(self.coin, "BUY", "🟢 BUY_SIGNAL")
             return True
         print(f"[{self.coin.symbol}] Not executing BUY: Already in position.")
         self.lock=False
@@ -36,14 +33,12 @@ class TradeManager:
 
     def execute_sell(self):
         self.lock=True
-        #SQL_DB_DashboardData.record_trade(self.coin,"SELL",reason)
         self.coin.is_in_bought_Position = False
         self.coin.total_sell_trades += 1
         self.coin.total_profit += self.coin.current_profit
         self.coin.buyed_price = 0.0
         self.coin.current_profit = 0.0
         print(f"[{self.coin.symbol}] Executing SELL. Total Sell Trades: {self.coin.total_sell_trades}, Total Profit: {self.coin.total_profit:.4f}")
-        # דיווח עסקה ל-SQLite
         self.lock=False
         return True
 
@@ -128,22 +123,9 @@ class TradeManager:
         self.coin.total_sell_trades = 0
         self.coin.total_profit = 0.0
         self.trade_log = []
-        # Optionally clear the log file as well
-        try:
-            if os.path.exists(Config.DB_NAME):
-                os.remove(Config.DB_NAME)
-        except Exception as e:
-            print(f"Error deleting database file: {e}")
-            pass
-        print("Trades database file deleted successfully.")
         try:
             with open(self.trade_log_path, "w") as f:
                 f.write("")
         except FileNotFoundError:
             print(f"Log file {self.trade_log_path} not found. Skipping reset.")
             pass # Log file might not exist yet
-        # try:
-            #SQL_DB_DashboardData.reset_trades_sqlite()
-        # except Exception as e:
-        #     print(f"Error resetting trades in SQLite for : {e}")
-        #     pass

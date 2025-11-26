@@ -3,3 +3,6 @@ asyncpg
 python-dotenv
 tabulate
 questionary
+streamlit
+plotly
+pandas

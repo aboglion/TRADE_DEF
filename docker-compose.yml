@@ -9,12 +9,32 @@ services:
     depends_on:
       - db  # ודא שבסיס הנתונים יופעל לפני האפליקציה
     environment:
+      - PYTHONPATH=/app # הנחייה מפורשת לפייתון לחפש מודולים בתיקיית הבסיס
       - DB_HOST=db  # כאן אנחנו מגדירים את משתנה הסביבה שהוספנו ל-CONFIG.py
       - DB_USER=${DB_USER:-postgres}
       - DB_PASSWORD=${DB_PASSWORD:-password}
       - DB_DATABASE=${DB_DATABASE:-trading_data}
     volumes:
       - .:/app # סנכרון הקוד המקומי עם הקונטיינר (מעולה לפיתוח)
+
+  # שירות מספר 1.5: הדשבורד (Streamlit)
+  dashboard:
+    build: .
+    container_name: trading_dashboard
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      - PYTHONPATH=/app
+      - DB_HOST=db
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-password}
+      - DB_DATABASE=${DB_DATABASE:-trading_data}
+    ports:
+      - "8501:8501"
+    volumes:
+      - .:/app
+    command: streamlit run dashboard.py
 
   # שירות מספר 2: בסיס הנתונים TimescaleDB
   db:
